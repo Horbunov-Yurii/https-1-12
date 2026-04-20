@@ -1,5 +1,8 @@
 import { Component } from "react";
 import Searchbar from "./component/Searchbar/Searchbar";
+import ImageGallery from "./component/ImageGallery/ImageGallery";
+import Loader from "./component/Loader/Loader";
+import Button from "./component/Button/Button";
 import { fetchImages } from "./api";
 
 class App extends Component {
@@ -7,17 +10,28 @@ class App extends Component {
     query: "",
     page: 1,
     images: [],
+    isLoading: false,
   };
 
   componentDidUpdate(prevProps, prevState) {
     if (prevState.query !== this.state.query) {
-      return;
+      this.loadImages()
     }
 
-    const {query, page} = this.state
-    fetchImages(query, page).then((res) => {
-      this.setState({images: res.hits})
-    })
+  }
+
+  loadImages = () => {
+    const { query, page } = this.state
+    if (!query) {
+      return 
+
+    }
+    this.setState({ isLoading: true, })
+    fetchImages(query, page).then((data) => {
+      this.setState((prevState) => ({
+        images: [...prevState.images, ...data.hits]
+      }))
+    }).finally(()=>this.setState({isLoading: false,}))
   }
 
   handleSearch = (query) => {
@@ -27,8 +41,22 @@ class App extends Component {
       images: [],
     });
   };
+
+
+  loadMore = () => {
+    this.setState((prevState) => ({ page: prevState.page + 1 }), () => { this.loadImages() })
+  }
+
   render() {
-    return <Searchbar onSubmit={this.handleSearch} />;
+    return (
+      <>
+        {this.state.isLoading && <Loader />}
+        <Searchbar onSubmit={this.handleSearch} />
+        <ImageGallery images={this.state.images} />
+    
+        {this.state.images.length > 0 && <Button onClick={this.loadMore} />}
+      </>
+    ); 
   }
 }
 
